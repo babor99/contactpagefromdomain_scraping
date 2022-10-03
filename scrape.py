@@ -2,104 +2,90 @@ import httpx
 from bs4 import BeautifulSoup
 import re
 
-search_list = ['contact-us', 'Contact-Us', 'contactus', 'ContactUs', 'contact', 'Contact', 'Contact-us', ]
 
-mystring = """
-            Hi, this is my string and in this string,
-            I will write all my routes. Like if a website has something robots.txt or 
-            sitemap.xml. I will do these things here in this string. So my robots.txt starts here:
-            User-agent: *
-            Disallow: /gp/richpub/listmania/createpipeline
-            Disallow: /gp/content-form
-            Disallow: /gp/pdp/invitation/invite
-            Disallow: /gp/customer-reviews/common/du
-            Disallow: /gp/customer-reviews/write-a-review.html
-            Disallow: /gp/associations/wizard.html
-            Disallow: /gp/music/clipserve
-            Disallow: /gp/customer-media/upload
-            Disallow: /gp/history
-            Disallow: /gp/item-dispatch
-            Disallow: /gp/Contact/order/handle-buy-box.html
-            Disallow: /gp/recsradio
-            Disallow: /gp/slredirect
-            """
-mystring2 = """
-            Hi, this is my string and in this string,
-            I will write all my routes. Like if a website has something robots.txt or 
-            sitemap.xml. I will do these things here in this string. So my robots.txt starts here:
-            User-agent: *
-            Disallow: /gp/richpub/listmania/createpipeline
-            Disallow: /gp/content-form
-            Disallow: /gp/pdp/invitation/invite
-            Disallow: /gp/customer-reviews/common/du
-            Disallow: /gp/customer-reviews/write-a-review.html
-            Disallow: /gp/associations/wizard.html
-            Disallow: /gp/music/clipserve
-            Disallow: /gp/customer-media/upload
-            Disallow: /gp/history
-            Disallow: /gp/item-dispatch
-            Disallow: /gp/dmusic/order/handle-buy-box.html
-            Disallow: /gp/recsradio
-            Disallow: /gp/slredirect
-            Disallow: /dp/shipping/
-            Disallow: /dp/twister-update/
-            Disallow: /dp/manual-submit/
-            Disallow: /dp/e-mail-friend/
-            Disallow: /dp/product-availability/
-            Disallow: /dp/rate-this-item/
-            Disallow: /gp/contactus/wishlist/*/reserve
-            Disallow: /gp/structured-ratings/actions/get-experience.html
-            Disallow: /Contactus/twitter/
-            Disallow: /gp/socialmedia/giveaways
-            Disallow: /contact/host/setup/
-            Disallow: /ss/ContactUs/lighthouse/
-            Disallow: /ospublishing/story/*
-            Disallow: /gp/aw/ol/
-            Disallow: /gp/promotion/
-            Disallow: /hz/leaderboard/top-reviewers/
-            Disallow: /hz/help/contactUs/*/message/$
-            Disallow: /gp/aw/shoppingAids/
-            Disallow: /rss/people/*/reviews
-            Disallow: /gp/pdp/rss/*/reviews
-            Disallow: /gp/cdp/member-reviews/
-            Disallow: /gp/aw/cr/
-            Disallow: */sim/B001132UEE
-            Allow: /gp/aag/main?*seller=ABVFEJU8LS620
-            Disallow: /gp/pdp/profile/
-            Disallow: /gp/help/customer/express/c2c/
-            Disallow: /slp/*/b$
-            Disallow: /hz/contact-us/ajax/initiate-trusted-contact/
-            Disallow: /gp/video/api
-            Disallow: /hp/video/api
-            Disallow: /gp/video/mystuff
-            Disallow: /hp/video/mystuff
-            Disallow: /gp/video/profiles
-            Disallow: /hp/video/profiles
-            """
+search_urls = ['contact-us', 'contactus', 'Contact-Us', 'ContactUs', 'Contact-us', 'contact', 'Contact', ]
 
-def scrape():
-    url = 'https://www.rokomari.com'
+
+def alternate_scrape(url: str):
+    return_url = None
+    for search_url in search_urls:
+        if url.endswith('/'):
+            full_url = url + search_url
+        else:
+            full_url = url + '/' + search_url
+
+        res = httpx.get(full_url)
+        if str(res.status_code) == '200':
+            return_url = full_url
+            break
+
+    return return_url
+
+
+def getFullUrlFromUrlAndHref(url: str, href: str) -> str:
+    if url in href:
+        return href
+    else:
+        if url.endswith('/'):
+            return url + href.replace('/', '', 1)
+        else:
+            return url + href
+
+
+
+
+# url = 'https://www.rokomari.com'
+# url = 'https://championplumbingandrooter.com'
+# url = 'https://www.alibaba.com'
+# url = 'https://www.amazon.com'
+# url = 'https://getintopc.com'
+# url = 'https://filehippo.com/'
+# url = 'https://www.airindia.in'
+url = 'https://www.biman-airlines.com'
+
+
+
+def scrape(url: str) -> str:
+    return_url = None
     res = httpx.get(url)
     print('res: ', res)
-    soup = BeautifulSoup(res.content, 'html.parser')
-    # print(soup.prettify())
-    print('res: ', res)
-    href_elem = soup.find(href=re.compile('(contact-?us)|(contact-?)', re.I))
-    print('href_elem: ', href_elem)
-    if href_elem:
-        href = href_elem.attrs['href']
-        if url in href:
-            contact_page = httpx.get(href)
-            print('contactpage: ', BeautifulSoup(contact_page.content, 'html.parser').prettify())
-            print('full url: ', href)
+    if str(res.status_code) == '200':
+        soup = BeautifulSoup(res.content, 'html.parser')
+        href_elements = soup.find_all(href=re.compile('(contact-?us)|(contact-?)', re.I))
+        elements_len = len(href_elements)
+        if  elements_len == 1:
+            href = href_elements[0].attrs['href']
+            return_url = getFullUrlFromUrlAndHref(url, href)
+        elif elements_len > 1:
+            content = ""
+            for elem in href_elements:
+                content += str(elem)
+            soup2 = BeautifulSoup(content, 'html.parser')
+            href_element = soup2.find(href=re.compile('contact-?us', re.I))
+            if href_element:
+                href = href_element.attrs['href']
+                return_url = getFullUrlFromUrlAndHref(url, href)
+            else:
+                href_element = soup2.find(href=re.compile('contact-?', re.I))
+                if href_element:
+                    href = href_element.attrs['href']
+                    return_url = getFullUrlFromUrlAndHref(url, href)
+                else:
+                    return_url = None
         else:
-            if url.endswith('/'):
-                full_url = url + href.replace('/', '', 1)
-                contact_page = httpx.get(full_url)
-                print('contactpage: ', BeautifulSoup(contact_page.content, 'html.parser').prettify())
-                print('full url: ', full_url)
+            return_url = alternate_scrape(url)
+
+    else:
+        return_url = alternate_scrape(url)
+
+    if return_url is not None:
+        return return_url
+    else:
+        raise PermissionError("The website can't be crawled or perhaps provided url is invalid.")
 
 
 
 if __name__ == '__main__':
-    scrape()
+    outcome = scrape(url)
+    print('outcome: ', outcome)
+
