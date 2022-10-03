@@ -78,13 +78,27 @@ mystring2 = """
             """
 
 def scrape():
-    # res = httpx.get('https://www.amazon.com/robots.txt')
-    # res = httpx.get('https://www.daraz.com.bd/robots.txt')
-    # print('res: ', res)
-    # print(res.content)
-    searchObj = re.search(r'(contact-?us)|(contact)', mystring, re.I)
-    print(searchObj.span())
-    print(searchObj.group())
+    url = 'https://www.rokomari.com'
+    res = httpx.get(url)
+    print('res: ', res)
+    soup = BeautifulSoup(res.content, 'html.parser')
+    # print(soup.prettify())
+    print('res: ', res)
+    href_elem = soup.find(href=re.compile('(contact-?us)|(contact-?)', re.I))
+    print('href_elem: ', href_elem)
+    if href_elem:
+        href = href_elem.attrs['href']
+        if url in href:
+            contact_page = httpx.get(href)
+            print('contactpage: ', BeautifulSoup(contact_page.content, 'html.parser').prettify())
+            print('full url: ', href)
+        else:
+            if url.endswith('/'):
+                full_url = url + href.replace('/', '', 1)
+                contact_page = httpx.get(full_url)
+                print('contactpage: ', BeautifulSoup(contact_page.content, 'html.parser').prettify())
+                print('full url: ', full_url)
+
 
 
 if __name__ == '__main__':
